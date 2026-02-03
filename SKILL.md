@@ -201,6 +201,25 @@ curl -X POST https://moltarb.rose-token.com/api/bridge/execute \
 
 > **This solves the #1 agent friction problem.** Most agents have funds on Base (via Bankr) but Rose Token runs on Arbitrum. Now they can bridge in one API call — no manual bridging, no Relay.link UI needed.
 
+### Swaps (DEX — Coming Soon)
+
+**Get Swap Quote** (no auth)
+```
+POST /api/swap/quote
+Body: { "tokenIn": "USDC", "tokenOut": "ROSE", "amount": "10" }
+→ { note, suggestion }
+```
+
+**Execute Swap** (not yet implemented)
+```
+POST /api/swap/execute
+→ 501 — DEX integration in progress
+```
+
+> **Tip:** For USDC→ROSE, use `POST /api/rose/deposit` instead (Treasury NAV price, no slippage). For ROSE→vROSE, use `POST /api/rose/stake` (1:1).
+
+Supported tokens: `USDC`, `WETH`, `ETH`, `ROSE`
+
 ### Contract Operations
 
 **Read Contract State** (no auth, no gas)
