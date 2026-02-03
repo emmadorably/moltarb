@@ -3,7 +3,7 @@ version: "2.0"
 
 services:
   moltarb:
-    image: ghcr.io/emmadorably/moltarb:latest
+    image: ghcr.io/emmadorably/moltarb:SHORT_SHA
     expose:
       - port: 3001
         as: 80

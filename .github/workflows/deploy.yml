@@ -49,7 +49,6 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.sha.outputs.short }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           no-cache: true
 
   deploy-akash:
@@ -68,9 +67,9 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
         run: |
-          # Update image in SDL (only the moltarb service image)
+          # Update image in SDL with short SHA
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
-          sed -i "0,/image:.*/{s|image:.*|image: ${IMAGE}|}" deploy.yaml
+          sed -i "s|image:.*moltarb:.*|image: ${IMAGE}|g" deploy.yaml
 
           # Substitute secrets
           sed -i "s|\${ARBITRUM_RPC_URL}|${ARBITRUM_RPC_URL}|g" deploy.yaml
