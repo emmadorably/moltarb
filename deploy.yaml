@@ -7,6 +7,8 @@ services:
     expose:
       - port: 3001
         as: 80
+        accept:
+          - moltarb.rose-token.com
         to:
           - global: true
     env:
