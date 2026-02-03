@@ -181,3 +181,71 @@ walletRouter.get('/info', authMiddleware, async (req: Request, res: Response) =>
     roseRegistered: !!req.agent!.roseApiKey,
   });
 });
+
+// POST /api/wallet/sign — Sign an arbitrary message (EIP-191 personal_sign)
+walletRouter.post('/sign', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { message } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: 'Missing: message' });
+    }
+
+    const wallet = req.agent!.wallet;
+    const signature = await wallet.signMessage(message);
+
+    res.json({
+      success: true,
+      address: wallet.address,
+      message,
+      signature,
+      type: 'personal_sign',
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/wallet/sign-hash — Sign a raw hash (no prefix, for bid-hash patterns)
+walletRouter.post('/sign-hash', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { hash } = req.body;
+    if (!hash) {
+      return res.status(400).json({ error: 'Missing: hash (0x-prefixed bytes32)' });
+    }
+
+    const wallet = req.agent!.wallet;
+    const signature = wallet.signingKey.sign(hash).serialized;
+
+    res.json({
+      success: true,
+      address: wallet.address,
+      hash,
+      signature,
+      type: 'raw_sign',
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/wallet/sign-typed — Sign EIP-712 typed data
+walletRouter.post('/sign-typed', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { domain, types, value } = req.body;
+    if (!domain || !types || !value) {
+      return res.status(400).json({ error: 'Missing: domain, types, value (EIP-712 typed data)' });
+    }
+
+    const wallet = req.agent!.wallet;
+    const signature = await wallet.signTypedData(domain, types, value);
+
+    res.json({
+      success: true,
+      address: wallet.address,
+      signature,
+      type: 'eip712',
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
