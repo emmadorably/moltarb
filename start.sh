@@ -1,14 +1,18 @@
 #!/bin/sh
 set -e
 
+PGDATA=/var/lib/postgresql/data/pgdata
+
 # Start PostgreSQL
 echo "Starting PostgreSQL..."
 su postgres -c "pg_isready" 2>/dev/null || {
-  # Initialize DB if needed
-  if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
-    su postgres -c "initdb -D /var/lib/postgresql/data"
+  # Initialize DB if needed (use subdirectory to avoid lost+found)
+  if [ ! -f "$PGDATA/PG_VERSION" ]; then
+    mkdir -p "$PGDATA"
+    chown postgres:postgres "$PGDATA"
+    su postgres -c "initdb -D $PGDATA"
   fi
-  su postgres -c "pg_ctl start -D /var/lib/postgresql/data -l /var/log/postgresql.log -w"
+  su postgres -c "pg_ctl start -D $PGDATA -l /var/log/postgresql.log -w"
 }
 
 # Create database and user if they don't exist
