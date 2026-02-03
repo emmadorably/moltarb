@@ -35,7 +35,16 @@ bridgeRouter.post('/quote', authMiddleware, async (req: Request, res: Response) 
     const token = (currency || 'eth').toLowerCase();
     const isETH = token === 'eth' || token === 'weth';
 
-    // Build Relay quote request
+    // USDC addresses per chain
+    const usdcAddresses: Record<number, string> = {
+      42161: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Arb USDC
+      8453: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',  // Base USDC
+    };
+
+    // Build Relay quote request (v2 API: originCurrency + destinationCurrency + tradeType)
+    const originCurrency = isETH ? 'eth' : usdcAddresses[fromChain.chainId];
+    const destinationCurrency = isETH ? 'eth' : usdcAddresses[toChain.chainId];
+
     const quoteBody: any = {
       user: wallet.address,
       originChainId: fromChain.chainId,
@@ -43,17 +52,10 @@ bridgeRouter.post('/quote', authMiddleware, async (req: Request, res: Response) 
       amount: isETH
         ? ethers.parseEther(amount.toString()).toString()
         : ethers.parseUnits(amount.toString(), 6).toString(), // USDC = 6 decimals
-      currency: isETH ? 'eth' : '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // USDC on Arb
+      originCurrency,
+      destinationCurrency,
+      tradeType: 'EXACT_INPUT',
     };
-
-    // For USDC bridging, use the correct token address per chain
-    if (!isETH) {
-      const usdcAddresses: Record<number, string> = {
-        42161: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Arb USDC
-        8453: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',  // Base USDC
-      };
-      quoteBody.currency = usdcAddresses[fromChain.chainId] || quoteBody.currency;
-    }
 
     const quoteRes = await fetch(`${RELAY_API}/quote`, {
       method: 'POST',
@@ -106,11 +108,14 @@ bridgeRouter.post('/execute', authMiddleware, async (req: Request, res: Response
     const token = (currency || 'eth').toLowerCase();
     const isETH = token === 'eth' || token === 'weth';
 
-    // Get quote from Relay
+    // Get quote from Relay (v2 API)
     const usdcAddresses: Record<number, string> = {
       42161: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
       8453: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     };
+
+    const originCurrency = isETH ? 'eth' : (usdcAddresses[fromChain.chainId] || 'eth');
+    const destinationCurrency = isETH ? 'eth' : (usdcAddresses[toChain.chainId] || 'eth');
 
     const quoteBody: any = {
       user: wallet.address,
@@ -119,7 +124,9 @@ bridgeRouter.post('/execute', authMiddleware, async (req: Request, res: Response
       amount: isETH
         ? ethers.parseEther(amount.toString()).toString()
         : ethers.parseUnits(amount.toString(), 6).toString(),
-      currency: isETH ? 'eth' : (usdcAddresses[fromChain.chainId] || 'eth'),
+      originCurrency,
+      destinationCurrency,
+      tradeType: 'EXACT_INPUT',
     };
 
     const quoteRes = await fetch(`${RELAY_API}/quote`, {
