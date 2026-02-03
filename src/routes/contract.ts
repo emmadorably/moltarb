@@ -1,23 +1,22 @@
 import { Router, Request, Response } from 'express';
 import { ethers } from 'ethers';
 import { config } from '../config';
+import { authMiddleware } from '../middleware/auth';
 
 export const contractRouter = Router();
 
-// POST /api/contract/call — Read contract state (no gas needed)
+// POST /api/contract/call — Read contract state (no auth needed, no gas)
 contractRouter.post('/call', async (req: Request, res: Response) => {
   try {
     const { to, data, abi, method, args } = req.body;
     const provider = new ethers.JsonRpcProvider(config.rpcUrl);
 
     if (data) {
-      // Raw calldata
       const result = await provider.call({ to, data });
       return res.json({ success: true, result });
     }
 
     if (abi && method) {
-      // ABI-based call
       const contract = new ethers.Contract(to, abi, provider);
       const result = await contract[method](...(args || []));
       return res.json({ success: true, result: result.toString() });
@@ -29,28 +28,24 @@ contractRouter.post('/call', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/contract/send — Execute contract transaction
-contractRouter.post('/send', async (req: Request, res: Response) => {
+// POST /api/contract/send — Execute contract transaction (custodial)
+contractRouter.post('/send', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { privateKey, to, data, value, abi, method, args } = req.body;
+    const { to, data, value, abi, method, args } = req.body;
+    const wallet = req.agent!.wallet;
 
-    if (!privateKey || !to) {
-      return res.status(400).json({ error: 'Missing required fields: privateKey, to' });
+    if (!to) {
+      return res.status(400).json({ error: 'Missing: to' });
     }
-
-    const provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    const wallet = new ethers.Wallet(privateKey, provider);
 
     let tx;
     if (data) {
-      // Raw calldata
       tx = await wallet.sendTransaction({
         to,
         data,
         value: value ? ethers.parseEther(value.toString()) : 0n,
       });
     } else if (abi && method) {
-      // ABI-based
       const contract = new ethers.Contract(to, abi, wallet);
       tx = await contract[method](...(args || []));
     } else {
@@ -61,6 +56,7 @@ contractRouter.post('/send', async (req: Request, res: Response) => {
     res.json({
       success: true,
       txHash: receipt?.hash,
+      from: wallet.address,
       blockNumber: receipt?.blockNumber,
       gasUsed: receipt?.gasUsed.toString(),
     });
@@ -69,17 +65,15 @@ contractRouter.post('/send', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/contract/approve — Approve token spending
-contractRouter.post('/approve', async (req: Request, res: Response) => {
+// POST /api/contract/approve — Approve token spending (custodial)
+contractRouter.post('/approve', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { privateKey, token, spender, amount } = req.body;
+    const { token, spender, amount } = req.body;
+    const wallet = req.agent!.wallet;
 
-    if (!privateKey || !token || !spender) {
-      return res.status(400).json({ error: 'Missing: privateKey, token, spender' });
+    if (!token || !spender) {
+      return res.status(400).json({ error: 'Missing: token, spender' });
     }
-
-    const provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    const wallet = new ethers.Wallet(privateKey, provider);
 
     const tokenAbi = [
       'function approve(address,uint256) returns (bool)',
@@ -98,6 +92,7 @@ contractRouter.post('/approve', async (req: Request, res: Response) => {
     res.json({
       success: true,
       txHash: receipt?.hash,
+      from: wallet.address,
       token,
       spender,
       amount: amount === 'unlimited' ? 'unlimited' : amount,

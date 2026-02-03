@@ -4,8 +4,8 @@ dotenv.config();
 export const config = {
   port: parseInt(process.env.PORT || '3001'),
   rpcUrl: process.env.ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc',
-  signerKey: process.env.SIGNER_PRIVATE_KEY || '',
-  databaseUrl: process.env.DATABASE_URL || '',
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://moltarb:moltarb@localhost:5432/moltarb',
+  encryptionKey: process.env.ENCRYPTION_KEY || '',
 
   contracts: {
     usdc: process.env.USDC_ADDRESS || '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { config } from './config';
+import { initDb } from './db';
 import { walletRouter } from './routes/wallet';
 import { swapRouter } from './routes/swap';
 import { contractRouter } from './routes/contract';
@@ -33,11 +34,22 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-app.listen(config.port, () => {
-  console.log(`🌹⚡ MoltArb running on port ${config.port}`);
-  console.log(`   Chain: Arbitrum One`);
-  console.log(`   RPC: ${config.rpcUrl}`);
-  console.log(`   Rose Token contracts loaded`);
+async function start() {
+  // Initialize database
+  await initDb();
+
+  app.listen(config.port, () => {
+    console.log(`🌹⚡ MoltArb running on port ${config.port}`);
+    console.log(`   Chain: Arbitrum One`);
+    console.log(`   RPC: ${config.rpcUrl}`);
+    console.log(`   Database: connected`);
+    console.log(`   Rose Token contracts loaded`);
+  });
+}
+
+start().catch((err) => {
+  console.error('[MoltArb] Failed to start:', err.message);
+  process.exit(1);
 });
 
 export default app;

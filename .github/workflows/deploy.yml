@@ -64,21 +64,24 @@ jobs:
           AKASH_CONSOLE_API_KEY: ${{ secrets.AKASH_CONSOLE_API_KEY }}
           AKASH_DSEQ: ${{ secrets.AKASH_DSEQ }}
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
-          SIGNER_PRIVATE_KEY: ${{ secrets.SIGNER_PRIVATE_KEY }}
           ARBITRUM_RPC_URL: ${{ secrets.ARBITRUM_RPC_URL }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
         run: |
-          # Update image in SDL
+          # Update image in SDL (only the moltarb service image)
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
-          sed -i "s|image:.*|image: ${IMAGE}|g" deploy.yaml
+          sed -i "0,/image:.*/{s|image:.*|image: ${IMAGE}|}" deploy.yaml
 
           # Substitute secrets
           sed -i "s|\${ARBITRUM_RPC_URL}|${ARBITRUM_RPC_URL}|g" deploy.yaml
-          sed -i "s|\${SIGNER_PRIVATE_KEY}|${SIGNER_PRIVATE_KEY}|g" deploy.yaml
+          sed -i "s|\${POSTGRES_PASSWORD}|${POSTGRES_PASSWORD}|g" deploy.yaml
+          sed -i "s|\${ENCRYPTION_KEY}|${ENCRYPTION_KEY}|g" deploy.yaml
 
           echo "Updated SDL (secrets redacted):"
           cat deploy.yaml | \
-            sed 's/SIGNER_PRIVATE_KEY=.*/SIGNER_PRIVATE_KEY=***REDACTED***/g' | \
-            sed 's/ARBITRUM_RPC_URL=.*/ARBITRUM_RPC_URL=***REDACTED***/g'
+            sed 's/ARBITRUM_RPC_URL=.*/ARBITRUM_RPC_URL=***REDACTED***/g' | \
+            sed 's/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=***REDACTED***/g' | \
+            sed 's/ENCRYPTION_KEY=.*/ENCRYPTION_KEY=***REDACTED***/g'
 
           SDL_CONTENT=$(cat deploy.yaml)
 
