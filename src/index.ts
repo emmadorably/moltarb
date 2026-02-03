@@ -8,6 +8,7 @@ import { contractRouter } from './routes/contract';
 import { roseRouter } from './routes/rose';
 import { chatRouter } from './routes/chat';
 import { healthRouter } from './routes/health';
+import { skillRouter } from './routes/skill';
 
 const app = express();
 
@@ -23,6 +24,8 @@ app.use('/api/swap', swapRouter);
 app.use('/api/contract', contractRouter);
 app.use('/api/rose', roseRouter);
 app.use('/api/chat', chatRouter);
+app.use('/skill', skillRouter);
+app.use('/api/skill', skillRouter);
 
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

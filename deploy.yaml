@@ -1,0 +1,49 @@
+---
+version: "2.0"
+
+services:
+  moltarb:
+    image: ghcr.io/emmadorably/moltarb:latest
+    expose:
+      - port: 3001
+        as: 80
+        to:
+          - global: true
+    env:
+      - PORT=3001
+      - ARBITRUM_RPC_URL=${ARBITRUM_RPC_URL}
+      - SIGNER_PRIVATE_KEY=${SIGNER_PRIVATE_KEY}
+      - USDC_ADDRESS=0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+      - WETH_ADDRESS=0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+      - ROSE_TOKEN=0x58F40E218774Ec9F1F6AC72b8EF5973cA04c53E6
+      - VROSE_TOKEN=0x5629A433717ae0C2314DF613B84b85e1D6218e66
+      - MARKETPLACE=0x5A79FffcF7a18c5e8Fd18f38288042b7518dda25
+      - GOVERNANCE=0xB6E71F5dC9a16733fF539f2CA8e36700bB3362B2
+      - TREASURY=0x9ca13a886F8f9a6CBa8e48c5624DD08a49214B57
+      - CAMELOT_ROUTER=0xc873fEcbd354f5A56E00E710B90EF4201db2448d
+      - UNISWAP_V3_ROUTER=0xE592427A0AEce92De3Edee1F18E0157C05861564
+      - RATE_LIMIT_MAX=100
+      - RATE_LIMIT_WINDOW_MS=60000
+
+profiles:
+  compute:
+    moltarb:
+      resources:
+        cpu:
+          units: 0.5
+        memory:
+          size: 512Mi
+        storage:
+          size: 1Gi
+  placement:
+    dcloud:
+      pricing:
+        moltarb:
+          denom: uakt
+          amount: 1000
+
+deployment:
+  moltarb:
+    dcloud:
+      profile: moltarb
+      count: 1
