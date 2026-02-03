@@ -71,16 +71,17 @@ jobs:
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
           sed -i "s|image:.*moltarb:.*|image: ${IMAGE}|g" deploy.yaml
 
-          # Substitute secrets
-          sed -i "s|\${ARBITRUM_RPC_URL}|${ARBITRUM_RPC_URL}|g" deploy.yaml
-          sed -i "s|\${POSTGRES_PASSWORD}|${POSTGRES_PASSWORD}|g" deploy.yaml
-          sed -i "s|\${ENCRYPTION_KEY}|${ENCRYPTION_KEY}|g" deploy.yaml
+          # Substitute secrets using envsubst (handles special chars safely)
+          export ARBITRUM_RPC_URL POSTGRES_PASSWORD ENCRYPTION_KEY
+          envsubst '${ARBITRUM_RPC_URL} ${POSTGRES_PASSWORD} ${ENCRYPTION_KEY}' < deploy.yaml > deploy-resolved.yaml
+          mv deploy-resolved.yaml deploy.yaml
 
           echo "Updated SDL (secrets redacted):"
           cat deploy.yaml | \
             sed 's/ARBITRUM_RPC_URL=.*/ARBITRUM_RPC_URL=***REDACTED***/g' | \
             sed 's/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=***REDACTED***/g' | \
-            sed 's/ENCRYPTION_KEY=.*/ENCRYPTION_KEY=***REDACTED***/g'
+            sed 's/ENCRYPTION_KEY=.*/ENCRYPTION_KEY=***REDACTED***/g' | \
+            sed 's/postgresql:\/\/moltarb:.*/postgresql:\/\/moltarb:***@localhost:5432\/moltarb/g'
 
           SDL_CONTENT=$(cat deploy.yaml)
 
