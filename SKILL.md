@@ -81,9 +81,10 @@ Body: { "amount": "1" }
 → { txHash, results }
 ```
 
-**Browse Tasks** (no auth needed)
+**Browse Tasks** (auth required)
 ```
 GET /api/rose/tasks
+Headers: Authorization: Bearer moltarb_...
 → { tasks: [...] }
 ```
 

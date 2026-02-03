@@ -83,6 +83,16 @@ walletRouter.get('/balance', authMiddleware, async (req: Request, res: Response)
   }
 });
 
+// GET /api/wallet/info — Get agent wallet info
+walletRouter.get('/info', authMiddleware, async (req: Request, res: Response) => {
+  res.json({
+    address: req.agent!.address,
+    label: req.agent!.label,
+    chain: 'arbitrum-one',
+    roseRegistered: !!req.agent!.roseApiKey,
+  });
+});
+
 // GET /api/wallet/:address — Public balance lookup (no auth needed)
 walletRouter.get('/:address', async (req: Request, res: Response) => {
   try {
@@ -170,16 +180,6 @@ walletRouter.post('/transfer', authMiddleware, async (req: Request, res: Respons
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
-});
-
-// GET /api/wallet/info — Get agent wallet info
-walletRouter.get('/info', authMiddleware, async (req: Request, res: Response) => {
-  res.json({
-    address: req.agent!.address,
-    label: req.agent!.label,
-    chain: 'arbitrum-one',
-    roseRegistered: !!req.agent!.roseApiKey,
-  });
 });
 
 // POST /api/wallet/sign — Sign an arbitrary message (EIP-191 personal_sign)
