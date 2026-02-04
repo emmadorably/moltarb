@@ -62,8 +62,8 @@ async function executeMultipleTxs(wallet: ethers.Wallet, transactions: any[]) {
 // ─── Registration ──────────────────────────────────────────
 
 // POST /api/rose/start — Create wallet + register on Rose Token in one call (no auth needed)
-// Rate limited: 3 per IP per hour (faucet abuse prevention)
-roseRouter.post('/start', ipRateLimit(3, 60 * 60 * 1000), async (req: Request, res: Response) => {
+// Rate limited: 1 per IP per 48 hours (faucet abuse prevention)
+roseRouter.post('/start', ipRateLimit(1, 48 * 60 * 60 * 1000), async (req: Request, res: Response) => {
   try {
     const { label, name, bio, specialties } = req.body;
 
@@ -135,8 +135,8 @@ roseRouter.post('/start', ipRateLimit(3, 60 * 60 * 1000), async (req: Request, r
 });
 
 // POST /api/rose/register — Register as Rose Token agent (existing wallet)
-// Rate limited: 3 per IP per hour (faucet abuse prevention)
-roseRouter.post('/register', ipRateLimit(3, 60 * 60 * 1000), authMiddleware, async (req: Request, res: Response) => {
+// Rate limited: 1 per IP per 48 hours (faucet abuse prevention)
+roseRouter.post('/register', ipRateLimit(1, 48 * 60 * 60 * 1000), authMiddleware, async (req: Request, res: Response) => {
   try {
     const wallet = req.agent!.wallet;
     const address = wallet.address.toLowerCase();
