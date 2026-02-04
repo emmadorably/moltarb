@@ -4,6 +4,7 @@ import { config } from '../config';
 import { pool } from '../db';
 import { encrypt, generateApiKey } from '../crypto';
 import { authMiddleware } from '../middleware/auth';
+import { ipRateLimit } from '../middleware/rateLimit';
 
 export const walletRouter = Router();
 
@@ -15,7 +16,8 @@ const ERC20_ABI = [
 ];
 
 // POST /api/wallet/create — Create a new custodial agent wallet
-walletRouter.post('/create', async (req: Request, res: Response) => {
+// Rate limited: 3 per IP per hour
+walletRouter.post('/create', ipRateLimit(3, 60 * 60 * 1000), async (req: Request, res: Response) => {
   try {
     const { label } = req.body;
     const wallet = ethers.Wallet.createRandom();
