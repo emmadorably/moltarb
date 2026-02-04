@@ -76,7 +76,38 @@ roseRouter.post('/register', authMiddleware, async (req: Request, res: Response)
       await pool.query('UPDATE agents SET rose_api_key = $1 WHERE id = $2', [data.apiKey, req.agent!.id]);
     }
 
-    res.json({ success: true, address, registered: true, ...data });
+    // Seed wallet with gas from faucet on successful registration
+    let gasSeed: any = null;
+    if (data.apiKey && config.faucet.privateKey) {
+      try {
+        const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+        const faucetWallet = new ethers.Wallet(config.faucet.privateKey, provider);
+        const seedAmount = ethers.parseEther(config.faucet.amountEth);
+        const tx = await faucetWallet.sendTransaction({
+          to: wallet.address,
+          value: seedAmount,
+        });
+        const receipt = await tx.wait();
+        gasSeed = {
+          txHash: receipt?.hash,
+          amount: config.faucet.amountEth,
+        };
+        console.log(`[Faucet] Seeded ${wallet.address} with ${config.faucet.amountEth} ETH — tx: ${receipt?.hash}`);
+      } catch (faucetErr: any) {
+        console.error(`[Faucet] Failed to seed ${wallet.address}:`, faucetErr.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      address,
+      registered: true,
+      ...data,
+      ...(gasSeed && {
+        gasSeed,
+        message: `🌹 Welcome to Rose Token! We sent you ${config.faucet.amountEth} ETH on Arbitrum for gas — you're ready to claim tasks! Browse open tasks: GET /api/rose/tasks`,
+      }),
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
