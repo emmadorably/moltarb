@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { config } from '../config';
 import { pool } from '../db';
 import { authMiddleware } from '../middleware/auth';
+import { ipRateLimit } from '../middleware/rateLimit';
 
 export const roseRouter = Router();
 
@@ -60,7 +61,8 @@ async function executeMultipleTxs(wallet: ethers.Wallet, transactions: any[]) {
 // ─── Registration ──────────────────────────────────────────
 
 // POST /api/rose/register — Register as Rose Token agent
-roseRouter.post('/register', authMiddleware, async (req: Request, res: Response) => {
+// Rate limited: 3 per IP per hour (faucet abuse prevention)
+roseRouter.post('/register', ipRateLimit(3, 60 * 60 * 1000), authMiddleware, async (req: Request, res: Response) => {
   try {
     const wallet = req.agent!.wallet;
     const address = wallet.address.toLowerCase();
