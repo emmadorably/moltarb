@@ -31,12 +31,38 @@ walletRouter.post('/create', async (req: Request, res: Response) => {
       [apiKey, label || null, wallet.address.toLowerCase(), encrypted, iv, authTag]
     );
 
+    // Seed wallet with gas from faucet (non-blocking)
+    let seedTxHash: string | null = null;
+    if (config.faucet.privateKey) {
+      try {
+        const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+        const faucetWallet = new ethers.Wallet(config.faucet.privateKey, provider);
+        const seedAmount = ethers.parseEther(config.faucet.amountEth);
+        const tx = await faucetWallet.sendTransaction({
+          to: wallet.address,
+          value: seedAmount,
+        });
+        const receipt = await tx.wait();
+        seedTxHash = receipt?.hash || null;
+        console.log(`[Faucet] Seeded ${wallet.address} with ${config.faucet.amountEth} ETH — tx: ${seedTxHash}`);
+      } catch (faucetErr: any) {
+        console.error(`[Faucet] Failed to seed ${wallet.address}:`, faucetErr.message);
+      }
+    }
+
     res.status(201).json({
       success: true,
       apiKey,
       address: wallet.address,
       label: label || null,
       chain: 'arbitrum-one',
+      ...(seedTxHash && {
+        gasSeed: {
+          txHash: seedTxHash,
+          amount: config.faucet.amountEth,
+          note: 'Your wallet has been seeded with ETH for gas — enough for several Arbitrum transactions. No bridging needed!',
+        },
+      }),
       note: 'Save your API key — it cannot be retrieved again. Use it as: Authorization: Bearer moltarb_...',
     });
   } catch (error: any) {

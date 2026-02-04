@@ -20,6 +20,11 @@ export const config = {
     uniswapV3Router: process.env.UNISWAP_V3_ROUTER || '0xE592427A0AEce92De3Edee1F18E0157C05861564',
   },
 
+  faucet: {
+    privateKey: process.env.FAUCET_PRIVATE_KEY || '',
+    amountEth: process.env.FAUCET_AMOUNT_ETH || '0.00002', // ~$0.05, enough for 5-10 Arbitrum txs
+  },
+
   rateLimit: {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
