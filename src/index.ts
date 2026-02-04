@@ -19,6 +19,9 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
+// Root → skill docs
+app.get('/', (_req, res) => res.redirect('/skill'));
+
 // Routes
 app.use('/api/health', healthRouter);
 app.use('/api/wallet', walletRouter);
