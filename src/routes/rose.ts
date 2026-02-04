@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { ethers } from 'ethers';
 import { config } from '../config';
 import { pool } from '../db';
+import { encrypt, generateApiKey } from '../crypto';
 import { authMiddleware } from '../middleware/auth';
 import { ipRateLimit } from '../middleware/rateLimit';
 
@@ -60,7 +61,75 @@ async function executeMultipleTxs(wallet: ethers.Wallet, transactions: any[]) {
 
 // ─── Registration ──────────────────────────────────────────
 
-// POST /api/rose/register — Register as Rose Token agent
+// POST /api/rose/start — Create wallet + register on Rose Token in one call (no auth needed)
+// Rate limited: 3 per IP per hour (faucet abuse prevention)
+roseRouter.post('/start', ipRateLimit(3, 60 * 60 * 1000), async (req: Request, res: Response) => {
+  try {
+    const { label, name, bio, specialties } = req.body;
+
+    // 1. Create wallet
+    const wallet = ethers.Wallet.createRandom();
+    const apiKey = generateApiKey();
+    const { encrypted, iv, authTag } = encrypt(wallet.privateKey);
+
+    await pool.query(
+      `INSERT INTO agents (api_key, label, address, encrypted_key, iv, auth_tag)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [apiKey, label || null, wallet.address.toLowerCase(), encrypted, iv, authTag]
+    );
+
+    // 2. Register on Rose Token
+    const address = wallet.address.toLowerCase();
+    const message = `register-agent:${address}`;
+    const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+    const connectedWallet = new ethers.Wallet(wallet.privateKey, provider);
+    const signature = await connectedWallet.signMessage(message);
+
+    const data = await signerPost('/api/agents/register', '', {
+      walletAddress: address, signature, name, bio, specialties,
+    }) as any;
+
+    if (data.apiKey) {
+      await pool.query('UPDATE agents SET rose_api_key = $1 WHERE address = $2', [data.apiKey, address]);
+    }
+
+    // 3. Seed with gas
+    let gasSeed: any = null;
+    if (data.apiKey && config.faucet.privateKey) {
+      try {
+        const faucetWallet = new ethers.Wallet(config.faucet.privateKey, provider);
+        const seedAmount = ethers.parseEther(config.faucet.amountEth);
+        const tx = await faucetWallet.sendTransaction({
+          to: wallet.address,
+          value: seedAmount,
+        });
+        const receipt = await tx.wait();
+        gasSeed = {
+          txHash: receipt?.hash,
+          amount: config.faucet.amountEth,
+        };
+        console.log(`[Start] Seeded ${wallet.address} with ${config.faucet.amountEth} ETH — tx: ${receipt?.hash}`);
+      } catch (faucetErr: any) {
+        console.error(`[Start] Failed to seed ${wallet.address}:`, faucetErr.message);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      apiKey,
+      address: wallet.address,
+      chain: 'arbitrum-one',
+      registered: true,
+      ...(gasSeed && { gasSeed }),
+      message: `🌹 Welcome to Rose Token! Your wallet is created, you're registered, ${gasSeed ? 'and we sent you free gas' : 'and you\'re ready to go'}. Claim a task: POST /api/rose/claim-task {"taskId": 6}`,
+      note: 'Save your API key — it cannot be retrieved again. Use it as: Authorization: Bearer moltarb_...',
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/rose/register — Register as Rose Token agent (existing wallet)
 // Rate limited: 3 per IP per hour (faucet abuse prevention)
 roseRouter.post('/register', ipRateLimit(3, 60 * 60 * 1000), authMiddleware, async (req: Request, res: Response) => {
   try {
