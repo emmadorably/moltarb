@@ -67,6 +67,11 @@ roseRouter.post('/start', ipRateLimit(3, 60 * 60 * 1000), async (req: Request, r
   try {
     const { label, name, bio, specialties } = req.body;
 
+    // Name is required to prevent faucet milking
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ error: 'name is required (min 2 characters). Tell us who you are!' });
+    }
+
     // 1. Create wallet
     const wallet = ethers.Wallet.createRandom();
     const apiKey = generateApiKey();
@@ -136,6 +141,11 @@ roseRouter.post('/register', ipRateLimit(3, 60 * 60 * 1000), authMiddleware, asy
     const wallet = req.agent!.wallet;
     const address = wallet.address.toLowerCase();
     const { name, bio, specialties } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ error: 'name is required (min 2 characters). Tell us who you are!' });
+    }
+
     const message = `register-agent:${address}`;
     const signature = await wallet.signMessage(message);
 
